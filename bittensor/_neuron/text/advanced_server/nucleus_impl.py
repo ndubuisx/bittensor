@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from transformers import AutoModel,AutoTokenizer,AutoConfig
 from torch.nn.utils.rnn import pad_sequence
 from loguru import logger; logger = logger.opt(colors=True)
-from transformers import PerceiverTokenizer, PerceiverForMaskedLM
+from transformers import PerceiverTokenizer, PerceiverForMaskedLM, PerceiverForSequenceClassification
 
 class server(torch.nn.Module):
     def __init__(self, 
@@ -55,6 +55,7 @@ class server(torch.nn.Module):
         self.pretrained = pretrained if pretrained != None else config.neuron.pretrained
         if self.pretrained == True:
             if self.model_name == 'deepmind/language-perceiver':
+                print(">>>> Running deepmind/language-perceiver...")
                 self.pre_model = PerceiverForMaskedLM.from_pretrained('deepmind/language-perceiver')
                 self.tokenizer = PerceiverTokenizer.from_pretrained('deepmind/language-perceiver')
             else:
@@ -68,6 +69,7 @@ class server(torch.nn.Module):
 
         #parameters of the models
         self.final_dim =  bittensor.__network_dim__
+        self.pre_model.config.output_hidden_states = True
         self.pre_dimension = self.pre_model.config.d_latents if self.model_name == 'deepmind/language-perceiver' else self.pre_model.config.hidden_size
         self.device = config.neuron.device
         self.padding = padding if padding != None else config.neuron.padding
@@ -133,8 +135,8 @@ class server(torch.nn.Module):
         """
         sen_len = inputs.size()
         inputs = self.token_remap(inputs,tokenizer).to(self.device)
-        pre_hidden = self.pre_model(inputs).last_hidden_state
-
+        pre_hidden = self.pre_model(inputs).hidden_states[-1] if self.model_name == 'deepmind/language-perceiver' else self.pre_model(inputs).last_hidden_state
+        
         if self.interpolate:
             down= F.interpolate(pre_hidden.unsqueeze(1),size=[sen_len[1],pre_hidden.size()[2]],mode=self.inter_degree).squeeze(1)
         elif self.mapping_function:
