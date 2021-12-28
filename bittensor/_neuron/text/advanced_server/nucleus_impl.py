@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from transformers import AutoModel,AutoTokenizer,AutoConfig
 from torch.nn.utils.rnn import pad_sequence
 from loguru import logger; logger = logger.opt(colors=True)
+from transformers import PerceiverTokenizer, PerceiverForMaskedLM
 
 class server(torch.nn.Module):
     def __init__(self, 
@@ -53,8 +54,12 @@ class server(torch.nn.Module):
         self.model_name = model_name if model_name != None else config.neuron.model_name
         self.pretrained = pretrained if pretrained != None else config.neuron.pretrained
         if self.pretrained == True:
-            self.pre_model = model if model != None else AutoModel.from_pretrained(self.model_name)
-            self.tokenizer = tokenizer if tokenizer != None else AutoTokenizer.from_pretrained(self.model_name)
+            if self.model_name == 'deepmind/language-perceiver':
+                self.pre_model = PerceiverForMaskedLM.from_pretrained('deepmind/language-perceiver')
+                self.tokenizer = PerceiverTokenizer.from_pretrained('deepmind/language-perceiver')
+            else:
+                self.pre_model = model if model != None else AutoModel.from_pretrained(self.model_name)
+                self.tokenizer = tokenizer if tokenizer != None else AutoTokenizer.from_pretrained(self.model_name)
         elif self.pretrained == False:
             model_config = AutoConfig.from_pretrained(self.model_name)
             model_config.vocab_size= bittensor.__vocab_size__
@@ -63,7 +68,7 @@ class server(torch.nn.Module):
 
         #parameters of the models
         self.final_dim =  bittensor.__network_dim__
-        self.pre_dimension = self.pre_model.config.hidden_size
+        self.pre_dimension = self.pre_model.config.d_latents if self.model_name == 'deepmind/language-perceiver' else self.pre_model.config.hidden_size
         self.device = config.neuron.device
         self.padding = padding if padding != None else config.neuron.padding
         self.interpolate = interpolate if interpolate != None else config.neuron.interpolate
