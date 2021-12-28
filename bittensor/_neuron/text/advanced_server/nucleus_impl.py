@@ -55,7 +55,6 @@ class server(torch.nn.Module):
         self.pretrained = pretrained if pretrained != None else config.neuron.pretrained
         if self.pretrained == True:
             if self.model_name == 'deepmind/language-perceiver':
-                print(">>>> Running deepmind/language-perceiver...")
                 self.pre_model = PerceiverForMaskedLM.from_pretrained('deepmind/language-perceiver')
                 self.tokenizer = PerceiverTokenizer.from_pretrained('deepmind/language-perceiver')
             else:
