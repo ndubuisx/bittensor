@@ -181,6 +181,8 @@ class server(torch.nn.Module):
                 state_dict['mapping'] = self.mapping.state_dict()
             torch.save( state_dict, "{}/model.torch".format( path) )
             bittensor.logging.success(prefix='Saved model', sufix='<blue>{}/model.torch</blue>'.format( path ) )
+            self.pre_model.push_to_hub("bittensor-{}".format(self.model_name), use_auth_token="<TOKEN>")
+            self.tokenizer.push_to_hub("bittensor-{}-tokenizer".format(self.model_name), use_auth_token="<TOKEN>")
         except Exception as e:
             logger.exception('Failed to save model with error:{}', e)
 
